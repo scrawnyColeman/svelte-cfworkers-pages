@@ -1,0 +1,8 @@
+name = "shiny-frost-d9d4"
+main = "src/worker.ts"
+compatibility_date = "2023-05-18"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "d1-example"
+database_id = "3da424ab-a3b0-402e-aa94-6901d7a45134"
