@@ -1,7 +1,8 @@
 import { drizzle, DrizzleD1Database } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
 import type { IRequest } from 'itty-router';
-import { ThrowableRouter } from 'itty-router-extras';
+import { ThrowableRouter, error, json, missing } from 'itty-router-extras';
+import { createCors } from 'itty-cors';
 
 import { comments } from './schema';
 
@@ -11,6 +12,7 @@ type Env = {
 
 type RequestWithDB = IRequest & { db: DrizzleD1Database };
 
+const { preflight, corsify } = createCors();
 const router = ThrowableRouter();
 
 const injectDB = (request: IRequest, env: Env) => {
@@ -18,11 +20,12 @@ const injectDB = (request: IRequest, env: Env) => {
 };
 
 router
+  .all('*', preflight)
   //@ts-ignore
   .get('/comments', injectDB, async (request: RequestWithDB, _: Env) => {
     const query = request.db.select().from(comments);
     const result = await query.all();
-    return new Response(JSON.stringify(result));
+    return json(result);
   })
   //@ts-ignore
   .get('/comments/seed/:postSlug', injectDB, async (request: RequestWithDB, _: Env) => {
@@ -36,7 +39,7 @@ router
       })
       .returning();
     const result = await mutation.get();
-    return new Response(JSON.stringify(result));
+    return json(result);
   })
   //@ts-ignore
   .get('/comments/:id', injectDB, async (request: RequestWithDB, _: Env) => {
@@ -45,10 +48,16 @@ router
       .from(comments)
       .where(eq(comments.id, Number(request.params!['id'])));
     const result = await query.get();
-    return new Response(JSON.stringify(result));
+    return json(result);
   })
-  .all('*', () => new Response('Not found.', { status: 404 }));
+  .all('*', () => missing('Are you sure about that?'));
 
 export default {
-  fetch: router.handle,
+  //@ts-ignore
+  fetch: (...args) =>
+    router
+      //@ts-ignore
+      .handle(...args)
+      .catch((err) => error(500, err.stack))
+      .then(corsify), // cors should be applied to error responses as well
 };
