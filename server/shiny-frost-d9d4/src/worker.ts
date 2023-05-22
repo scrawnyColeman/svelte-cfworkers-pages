@@ -53,11 +53,9 @@ router
   .all('*', () => missing('Are you sure about that?'));
 
 export default {
-  //@ts-ignore
-  fetch: (...args) =>
+  fetch: (request: Request, env: Env, ctx: ExecutionContext) =>
     router
-      //@ts-ignore
-      .handle(...args)
+      .handle(request, env, ctx)
       .catch((err) => error(500, err.stack))
-      .then(corsify), // cors should be applied to error responses as well
+      .then(corsify),
 };
